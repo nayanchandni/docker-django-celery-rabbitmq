@@ -1,0 +1,52 @@
+version: '2'
+
+services:
+  # Redis - result backend
+  redis:
+    image: redis:2.8.19
+    hostname: redis
+
+
+  # RabbitMQ - queue
+  rabbit:
+    hostname: rabbit
+    image: rabbitmq:3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=mypass
+    ports:
+      - "5672:5672"  
+      - "15672:15672"  # here, we can access rabbitmq management plugin
+     
+  
+  # Django web server - celery master
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: web
+    command: sh ./run_web.sh
+    volumes:
+      - .:/app  
+    ports:
+      - "8000:8000"
+    links:
+      - rabbit
+      - redis
+  
+  # Celery worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh ./run_celery.sh
+    volumes:
+      - .:/app
+    links:
+      - rabbit
+      - redis
+    depends_on:
+      - rabbit
+
+
+  
